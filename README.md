@@ -12,7 +12,13 @@
 
 ## ✨ Features
 
-- 🖼️ **Supported formats** – JPG, JPEG, TIFF, TIF
+- 🖼️ **Supported formats**
+Pictures: JPG, JPEG, TIFF, TIF, PNG, WEBP, HEIC, HEIF, BMP, GIF
+
+RAW: RAW, CR2, CR3, NEF, ARW, DNG
+
+Video: MP4, MOV, AVI, MKV, WEBM, MTS, M2TS
+
 - 📸 **Full EXIF data** – Camera make, model, exposure, ISO, datetime, etc.
 - 🌍 **GPS extraction** – Converts DMS to decimal, provides Google Maps & OpenStreetMap links
 - 🔍 **Duplicate detection** – SHA256 hash comparison
