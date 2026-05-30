@@ -1,0 +1,12 @@
+# Required
+exifread>=3.0.0
+rich>=13.0.0
+
+# Optional – image formats (PNG, WEBP, HEIC, HEIF, BMP, GIF)
+Pillow>=10.0.0
+
+# Optional – RAW formats (CR2, CR3, NEF, ARW, DNG, etc.)
+rawpy>=0.18.0
+
+# Optional – Video formats (MP4, MOV, AVI, MKV, etc.)
+pymediainfo>=6.0.0
