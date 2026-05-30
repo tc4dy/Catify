@@ -13,6 +13,7 @@
 ## ✨ Features
 
 - 🖼️ **Supported formats**
+
 Pictures: JPG, JPEG, TIFF, TIF, PNG, WEBP, HEIC, HEIF, BMP, GIF
 
 RAW: RAW, CR2, CR3, NEF, ARW, DNG
