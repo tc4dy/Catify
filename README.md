@@ -1,4 +1,4 @@
-![Catify](catify.jpg)
+![Catify](https://raw.githubusercontent.com/tc4dy/Catify/main/catify.jpg)
 
 # 🐱 Catify – Professional EXIF Metadata Tool
 
