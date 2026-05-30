@@ -184,5 +184,3 @@ pip install exifread rich
 🐾 Author
 
 @tc4dy | Claude provides debugging and output support. 🙏
-
-```
