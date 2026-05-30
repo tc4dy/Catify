@@ -26,11 +26,41 @@ except ImportError:
     print("Missing: pip install rich")
     sys.exit(1)
 
+try:
+    from PIL import Image
+    from PIL.ExifTags import TAGS, GPSTAGS
+    PILLOW_AVAILABLE = True
+except ImportError:
+    PILLOW_AVAILABLE = False
+
+try:
+    import rawpy
+    RAWPY_AVAILABLE = True
+except ImportError:
+    RAWPY_AVAILABLE = False
+
+try:
+    from pymediainfo import MediaInfo
+    MEDIAINFO_AVAILABLE = True
+except ImportError:
+    MEDIAINFO_AVAILABLE = False
+
 CONSOLE = Console()
 
 VERSION = "2.0.0"
 
-SUPPORTED_EXT = {".jpg", ".jpeg", ".tiff", ".tif"}
+SUPPORTED_EXT = {
+    ".jpg", ".jpeg", ".tiff", ".tif",
+    ".png", ".webp", ".heic", ".heif",
+    ".raw", ".cr2", ".cr3", ".nef", ".arw", ".dng",
+    ".bmp", ".gif",
+    ".mp4", ".mov", ".avi", ".mkv", ".webm", ".mts", ".m2ts"
+}
+
+EXIFREAD_EXT = {".jpg", ".jpeg", ".tiff", ".tif"}
+PILLOW_EXT   = {".png", ".webp", ".bmp", ".gif", ".heic", ".heif"}
+RAW_EXT      = {".raw", ".cr2", ".cr3", ".nef", ".arw", ".dng"}
+VIDEO_EXT    = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".mts", ".m2ts"}
 
 ASCII_BANNER = """
   /\\_____/\\
@@ -127,6 +157,28 @@ def extract_gps(tags: dict):
         return None
 
 
+def extract_gps_from_pillow(gps_data: dict):
+    try:
+        def to_decimal(vals, ref):
+            d = float(vals[0])
+            m = float(vals[1])
+            s = float(vals[2])
+            result = d + m / 60.0 + s / 3600.0
+            if ref in ("S", "W"):
+                result = -result
+            return round(result, 7)
+
+        lat = to_decimal(gps_data.get(2, (0, 0, 0)), gps_data.get(1, "N"))
+        lon = to_decimal(gps_data.get(4, (0, 0, 0)), gps_data.get(3, "E"))
+        if lat == 0.0 and lon == 0.0:
+            return None
+        maps_url = f"https://www.google.com/maps?q={lat},{lon}"
+        osm_url = f"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}&zoom=15"
+        return {"lat": lat, "lon": lon, "google_maps": maps_url, "openstreetmap": osm_url}
+    except Exception:
+        return None
+
+
 def extract_thumbnail(tags: dict, path: Path, thumb_dir: Path) -> str:
     try:
         with open(path, "rb") as f:
@@ -143,6 +195,18 @@ def extract_thumbnail(tags: dict, path: Path, thumb_dir: Path) -> str:
         return ""
 
 
+def extract_thumbnail_pillow(path: Path, thumb_dir: Path) -> str:
+    try:
+        img = Image.open(path)
+        img.thumbnail((160, 160))
+        thumb_dir.mkdir(parents=True, exist_ok=True)
+        thumb_path = thumb_dir / f"{path.stem}_thumb.jpg"
+        img.convert("RGB").save(thumb_path, "JPEG")
+        return str(thumb_path.resolve())
+    except Exception:
+        return ""
+
+
 def read_exif(path: Path) -> dict:
     try:
         with open(path, "rb") as f:
@@ -150,6 +214,209 @@ def read_exif(path: Path) -> dict:
         return tags if tags else {}
     except Exception:
         return None
+
+
+def read_exif_pillow(path: Path) -> dict:
+    if not PILLOW_AVAILABLE:
+        return None
+    try:
+        img = Image.open(path)
+        raw = None
+        try:
+            exif_obj = img.getexif()
+            raw = dict(exif_obj) if exif_obj else None
+        except Exception:
+            pass
+        if not raw:
+            try:
+                raw = img._getexif()
+            except Exception:
+                pass
+        if not raw:
+            return {}
+        result = {}
+        for tag_id, value in raw.items():
+            tag_name = TAGS.get(tag_id, str(tag_id))
+            if tag_name == "GPSInfo":
+                continue
+            try:
+                result[f"Image {tag_name}"] = str(value)
+            except Exception:
+                pass
+        return result
+    except Exception:
+        return None
+
+
+def read_exif_pillow_gps(path: Path):
+    if not PILLOW_AVAILABLE:
+        return None
+    try:
+        img = Image.open(path)
+        raw = None
+        try:
+            exif_obj = img.getexif()
+            raw = dict(exif_obj) if exif_obj else None
+        except Exception:
+            pass
+        if not raw:
+            try:
+                raw = img._getexif()
+            except Exception:
+                pass
+        if not raw:
+            return None
+        for tag_id, value in raw.items():
+            tag_name = TAGS.get(tag_id, str(tag_id))
+            if tag_name == "GPSInfo":
+                gps = {}
+                for k, v in value.items():
+                    gps[k] = v
+                return extract_gps_from_pillow(gps)
+        return None
+    except Exception:
+        return None
+
+
+def read_exif_raw(path: Path) -> dict:
+    if not RAWPY_AVAILABLE:
+        return None
+    try:
+        with rawpy.imread(str(path)) as raw:
+            tags = {}
+            try:
+                tags["Image Make"] = str(raw.metadata.camera_manufacturer or "")
+            except Exception:
+                pass
+            try:
+                tags["Image Model"] = str(raw.metadata.camera_model or "")
+            except Exception:
+                pass
+            try:
+                ts = raw.metadata.timestamp
+                if ts:
+                    tags["Image DateTime"] = str(datetime.fromtimestamp(ts).strftime("%Y:%m:%d %H:%M:%S"))
+            except Exception:
+                pass
+            try:
+                tags["Image ISO"] = str(raw.metadata.iso)
+            except Exception:
+                pass
+            try:
+                tags["Image ShutterSpeed"] = str(raw.metadata.shutter)
+            except Exception:
+                pass
+            try:
+                tags["Image Aperture"] = str(raw.metadata.aperture)
+            except Exception:
+                pass
+            try:
+                tags["Image FocalLen"] = str(raw.metadata.focal_len)
+            except Exception:
+                pass
+            try:
+                tags["Image Width"] = str(raw.sizes.width)
+                tags["Image Height"] = str(raw.sizes.height)
+            except Exception:
+                pass
+        return {k: v for k, v in tags.items() if v and v != "None"}
+    except Exception:
+        return None
+
+
+def read_exif_video(path: Path) -> dict:
+    if not MEDIAINFO_AVAILABLE:
+        return None
+    try:
+        info = MediaInfo.parse(str(path))
+        result = {}
+        for track in info.tracks:
+            prefix = track.track_type
+            for key, val in track.to_data().items():
+                if val is not None and str(val).strip():
+                    result[f"{prefix} {key}"] = str(val)
+        return result if result else {}
+    except Exception:
+        return None
+
+
+def read_exif_video_gps(path: Path):
+    if not MEDIAINFO_AVAILABLE:
+        return None
+    try:
+        info = MediaInfo.parse(str(path))
+        for track in info.tracks:
+            data = track.to_data()
+            lat = data.get("comapplequicktimegpslocation") or data.get("gps_position")
+            if lat:
+                parts = str(lat).replace("+", " +").replace("-", " -").split()
+                parts = [p for p in parts if p]
+                if len(parts) >= 2:
+                    try:
+                        la = float(parts[0])
+                        lo = float(parts[1])
+                        if la != 0.0 or lo != 0.0:
+                            maps_url = f"https://www.google.com/maps?q={la},{lo}"
+                            osm_url = f"https://www.openstreetmap.org/?mlat={la}&mlon={lo}&zoom=15"
+                            return {"lat": la, "lon": lo, "google_maps": maps_url, "openstreetmap": osm_url}
+                    except Exception:
+                        pass
+        return None
+    except Exception:
+        return None
+
+
+def dispatch_read(path: Path, thumb_dir: Path):
+    ext = path.suffix.lower()
+    tags = {}
+    gps = None
+    thumb_path = ""
+
+    if ext in EXIFREAD_EXT:
+        raw_tags = read_exif(path)
+        if raw_tags is None:
+            return None, {}, None, ""
+        if not raw_tags:
+            return "no_exif", {}, None, ""
+        tags = {str(k): str(v) for k, v in raw_tags.items()}
+        gps = extract_gps(raw_tags)
+        thumb_path = extract_thumbnail(raw_tags, path, thumb_dir)
+        return "ok", tags, gps, thumb_path
+
+    elif ext in PILLOW_EXT:
+        if not PILLOW_AVAILABLE:
+            return None, {}, None, ""
+        raw_tags = read_exif_pillow(path)
+        if raw_tags is None:
+            return None, {}, None, ""
+        if not raw_tags:
+            return "no_exif", {}, None, ""
+        gps = read_exif_pillow_gps(path)
+        thumb_path = extract_thumbnail_pillow(path, thumb_dir)
+        return "ok", raw_tags, gps, thumb_path
+
+    elif ext in RAW_EXT:
+        if not RAWPY_AVAILABLE:
+            return None, {}, None, ""
+        raw_tags = read_exif_raw(path)
+        if raw_tags is None:
+            return None, {}, None, ""
+        if not raw_tags:
+            return "no_exif", {}, None, ""
+        return "ok", raw_tags, None, ""
+
+    elif ext in VIDEO_EXT:
+        if not MEDIAINFO_AVAILABLE:
+            return None, {}, None, ""
+        raw_tags = read_exif_video(path)
+        if raw_tags is None:
+            return None, {}, None, ""
+        if not raw_tags:
+            return "no_exif", {}, None, ""
+        gps = read_exif_video_gps(path)
+        return "ok", raw_tags, gps, ""
+
+    return None, {}, None, ""
 
 
 def collect_files(input_path: str, recursive: bool) -> list:
@@ -206,21 +473,16 @@ def build_records(files: list, thumb_dir: Path, verbose: bool) -> list:
                 else:
                     hash_map[sha] = str(path)
 
-            raw_tags = read_exif(path)
-            exif_clean = None
-            gps = None
-            thumb_path = ""
+            status_result, exif_clean, gps, thumb_path = dispatch_read(path, thumb_dir)
 
-            if raw_tags is None:
+            if status_result is None:
                 status = "error"
-            elif len(raw_tags) == 0:
+                exif_clean = {}
+            elif status_result == "no_exif":
                 status = "no_exif"
                 exif_clean = {}
             else:
                 status = "ok"
-                exif_clean = {str(k): str(v) for k, v in raw_tags.items()}
-                gps = extract_gps(raw_tags)
-                thumb_path = extract_thumbnail(raw_tags, path, thumb_dir)
 
             records.append({
                 "file": path.name,
