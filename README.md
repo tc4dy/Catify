@@ -36,8 +36,8 @@ Video: MP4, MOV, AVI, MKV, WEBM, MTS, M2TS
 ### 1. Clone or download the script
 
 ```bash
-git clone https://github.com/yourusername/catify.git
-cd catify
+git clone https://github.com/tc4dy/Catify.git
+cd Catify
 ```
 
 2. Install dependencies
