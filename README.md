@@ -191,3 +191,4 @@ pip install exifread rich
 🐾 Author
 
 @tc4dy | Claude provides debugging and output support. 🙏
+The previous version (V1) has been further developed to offer improved formatting, output support, and more comprehensive metadata support.
