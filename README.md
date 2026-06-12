@@ -36,11 +36,7 @@ Video: MP4, MOV, AVI, MKV, WEBM, MTS, M2TS
 ## Download Full Version 
 ### https://github.com/tc4dy/Catify/releases/tag/Catify
 
----
-
-or 
-
----
+**OR**
 
 ### 1. Clone or download the script
 
