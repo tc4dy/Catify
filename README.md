@@ -33,6 +33,11 @@ Video: MP4, MOV, AVI, MKV, WEBM, MTS, M2TS
 
 ## 📦 Installation
 
+## Download Full Version 
+### https://github.com/tc4dy/Catify/releases/tag/Catify
+
+or 
+
 ### 1. Clone or download the script
 
 ```bash
