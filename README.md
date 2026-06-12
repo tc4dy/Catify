@@ -240,6 +240,6 @@ If a file contains an embedded thumbnail (common in JPEGs) or supports thumbnail
 
 ## 🐾 Author
 
-**@tc4dy** — with debugging and output support from Claude. 🙏
+**@tc4dy** 
 
 The previous version (V1) has been further developed to offer improved formatting, broader format support, and more comprehensive metadata extraction.
