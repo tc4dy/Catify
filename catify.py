@@ -6,7 +6,8 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeEl
 
 from utils import (
     SUPPORTED_EXT, EXIFREAD_EXT, PILLOW_EXT, RAW_EXT, VIDEO_EXT,
-    VERSION, ASCII_BANNER, file_sha256, get_size_str, get_mtime,
+    VERSION, ASCII_BANNER, DEFAULT_SANITIZE_MAX_LENGTH,
+    file_sha256, get_size_str, get_mtime, sanitize_exif_dict,
 )
 from readers import (
     read_exif, read_exif_pillow, read_exif_pillow_gps,
@@ -89,7 +90,9 @@ def collect_files(input_path: str, recursive: bool) -> list:
     return sorted(set(files))
 
 
-def build_records(files: list, thumb_dir: Path, verbose: bool) -> list:
+def build_records(files: list, thumb_dir: Path, verbose: bool,
+                   sanitize: bool = False,
+                   sanitize_length: int = DEFAULT_SANITIZE_MAX_LENGTH) -> list:
     records = []
     hash_map = {}
     duplicate_hashes = set()
@@ -132,6 +135,9 @@ def build_records(files: list, thumb_dir: Path, verbose: bool) -> list:
             else:
                 status = "ok"
 
+            if sanitize and exif_clean:
+                exif_clean = sanitize_exif_dict(exif_clean, sanitize_length)
+
             records.append({
                 "file": path.name,
                 "path": str(path.resolve()),
@@ -165,6 +171,7 @@ def main():
             "  catify -i photo.jpg\n"
             "  catify -i ./photos -r --html report.html --json exif.json -v\n"
             "  catify -i ./photos -r --csv out.csv --html out.html --json out.json\n"
+            "  catify -i ./photos -r --sanitize --sanitize-length 120\n"
         ),
     )
     parser.add_argument("-i", "--input", required=True, metavar="PATH",
@@ -178,9 +185,18 @@ def main():
                         help="Thumbnail output directory (default: catify_thumbs)")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="Print each file name")
+    parser.add_argument("--sanitize", action="store_true",
+                        help="Sanitize EXIF tag/value strings before display and export (escapes non-printable characters and truncates long values)")
+    parser.add_argument("--sanitize-length", type=int, default=DEFAULT_SANITIZE_MAX_LENGTH,
+                        metavar="N",
+                        help=f"Maximum visible length for sanitized EXIF values (default: {DEFAULT_SANITIZE_MAX_LENGTH}, requires --sanitize)")
     parser.add_argument("--version", action="version", version=f"Catify v{VERSION}")
 
     args = parser.parse_args()
+
+    if args.sanitize_length < 1:
+        CONSOLE.print("[bold red][ERROR][/bold red] --sanitize-length must be a positive integer")
+        sys.exit(1)
 
     files = collect_files(args.input, args.recursive)
     if not files:
@@ -190,7 +206,13 @@ def main():
     CONSOLE.print(f"[dim]{len(files)} files found, processing…[/dim]\n")
 
     thumb_dir = Path(args.thumbs)
-    records = build_records(files, thumb_dir, args.verbose)
+    records = build_records(
+        files,
+        thumb_dir,
+        args.verbose,
+        sanitize=args.sanitize,
+        sanitize_length=args.sanitize_length,
+    )
 
     print_rich_table(records)
 
