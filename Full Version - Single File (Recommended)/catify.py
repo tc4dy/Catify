@@ -47,7 +47,7 @@ except ImportError:
 
 CONSOLE = Console()
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 
 SUPPORTED_EXT = {
     ".jpg", ".jpeg", ".tiff", ".tif",
@@ -77,6 +77,7 @@ STATUS_NO_EXIF = "[yellow]NO EXIF[/yellow]"
 STATUS_ERROR = "[red]ERROR[/red]"
 STATUS_DUP = "[magenta]DUPLICATE[/magenta]"
 
+DEFAULT_SANITIZE_MAX_LENGTH = 700
 
 def print_banner():
     CONSOLE.print(Panel(
@@ -86,7 +87,6 @@ def print_banner():
         border_style="cyan",
         expand=False,
     ))
-
 
 def file_sha256(path: Path) -> str:
     h = hashlib.sha256()
@@ -98,7 +98,6 @@ def file_sha256(path: Path) -> str:
     except Exception:
         return ""
 
-
 def get_size_str(path: Path) -> str:
     try:
         size = path.stat().st_size
@@ -109,8 +108,7 @@ def get_size_str(path: Path) -> str:
         return f"{size:.1f} TB"
     except Exception:
         return "N/A"
-
-
+        
 def get_mtime(path: Path) -> str:
     try:
         return datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
@@ -136,6 +134,38 @@ def dms_to_decimal(values, ref) -> float:
         return 0.0
 
 
+def sanitize_value(value, max_length: int = DEFAULT_SANITIZE_MAX_LENGTH) -> str:
+    text = str(value)
+    sanitized_chars = []
+    visible_length = 0
+    truncated = False
+
+    for char in text:
+        if char.isprintable():
+            part = char
+        else:
+            part = f"\\x{ord(char):02x}"
+
+        if visible_length + len(part) > max_length:
+            truncated = True
+            break
+
+        sanitized_chars.append(part)
+        visible_length += len(part)
+
+    result = "".join(sanitized_chars)
+    if truncated:
+        result += "..."
+    return result
+
+
+def sanitize_exif_dict(exif: dict, max_length: int = DEFAULT_SANITIZE_MAX_LENGTH) -> dict:
+    return {
+        sanitize_value(tag, max_length): sanitize_value(val, max_length)
+        for tag, val in exif.items()
+    }
+
+
 def extract_gps(tags: dict):
     try:
         lat_tag = tags.get("GPS GPSLatitude")
@@ -155,7 +185,6 @@ def extract_gps(tags: dict):
         return {"lat": lat, "lon": lon, "google_maps": maps_url, "openstreetmap": osm_url}
     except Exception:
         return None
-
 
 def extract_gps_from_pillow(gps_data: dict):
     try:
@@ -441,7 +470,9 @@ def collect_files(input_path: str, recursive: bool) -> list:
     return sorted(set(files))
 
 
-def build_records(files: list, thumb_dir: Path, verbose: bool) -> list:
+def build_records(files: list, thumb_dir: Path, verbose: bool,
+                   sanitize: bool = False,
+                   sanitize_length: int = DEFAULT_SANITIZE_MAX_LENGTH) -> list:
     records = []
     hash_map = {}
     duplicate_hashes = set()
@@ -483,6 +514,9 @@ def build_records(files: list, thumb_dir: Path, verbose: bool) -> list:
                 exif_clean = {}
             else:
                 status = "ok"
+
+            if sanitize and exif_clean:
+                exif_clean = sanitize_exif_dict(exif_clean, sanitize_length)
 
             records.append({
                 "file": path.name,
@@ -809,6 +843,7 @@ def main():
             "  catify -i photo.jpg\n"
             "  catify -i ./photos -r --html report.html --json exif.json -v\n"
             "  catify -i ./photos -r --csv out.csv --html out.html --json out.json\n"
+            "  catify -i ./photos -r --sanitize --sanitize-length 120\n"
         ),
     )
     parser.add_argument("-i", "--input", required=True, metavar="PATH",
@@ -822,9 +857,18 @@ def main():
                         help="Thumbnail output directory (default: catify_thumbs)")
     parser.add_argument("-v", "--verbose", action="store_true",
                         help="Print each file name")
+    parser.add_argument("--sanitize", action="store_true",
+                        help="Sanitize EXIF tag/value strings before display and export (escapes non-printable characters and truncates long values)")
+    parser.add_argument("--sanitize-length", type=int, default=DEFAULT_SANITIZE_MAX_LENGTH,
+                        metavar="N",
+                        help=f"Maximum visible length for sanitized EXIF values (default: {DEFAULT_SANITIZE_MAX_LENGTH}, requires --sanitize)")
     parser.add_argument("--version", action="version", version=f"Catify v{VERSION}")
 
     args = parser.parse_args()
+
+    if args.sanitize_length < 1:
+        CONSOLE.print("[bold red][ERROR][/bold red] --sanitize-length must be a positive integer")
+        sys.exit(1)
 
     files = collect_files(args.input, args.recursive)
     if not files:
@@ -834,7 +878,13 @@ def main():
     CONSOLE.print(f"[dim]{len(files)} files found, processing…[/dim]\n")
 
     thumb_dir = Path(args.thumbs)
-    records = build_records(files, thumb_dir, args.verbose)
+    records = build_records(
+        files,
+        thumb_dir,
+        args.verbose,
+        sanitize=args.sanitize,
+        sanitize_length=args.sanitize_length,
+    )
 
     print_rich_table(records)
 
@@ -846,7 +896,6 @@ def main():
         write_html(records, args.html)
 
     CONSOLE.print()
-
 
 if __name__ == "__main__":
     main()
