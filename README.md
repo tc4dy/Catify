@@ -19,6 +19,7 @@
 | 🌍 GPS extraction | Converts DMS to decimal, provides Google Maps & OpenStreetMap links |
 | 🔍 Duplicate detection | SHA256 hash comparison across files |
 | 🖼️ Thumbnail extraction | Saves embedded thumbnails to a separate directory |
+| 🛡️ EXIF Sanitization | Automatically escapes non-printable chars and truncates long values (XSS protection) |
 | 📊 Rich terminal output | Colorful tables with live progress bar (via `rich`) |
 | 📄 Multiple export formats | CSV, JSON, HTML (viewable in any browser) |
 | 🚀 Recursive scanning | Process entire folder trees |
