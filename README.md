@@ -1,6 +1,6 @@
 ![Catify](https://raw.githubusercontent.com/tc4dy/Catify/main/catify.jpg)
 
-# 🐱 Catify – EXIF Metadata Tool
+# Catify – EXIF Metadata Tool
 
 **Catify** is a powerful command-line tool to extract, analyze, and report metadata from images, RAW files, and videos. It detects duplicate files via SHA256, extracts GPS coordinates with direct map links, saves embedded thumbnails, and generates beautiful terminal output or export reports in CSV, JSON, or HTML.
 
@@ -11,7 +11,7 @@
 
 ---
 
-## ✨ Features
+##  Features
 
 | Feature | Description |
 |---|---|
@@ -27,7 +27,7 @@
 
 ---
 
-## 🖼️ Supported Formats
+## Supported Formats
 
 | Category | Extensions | Reader Used |
 |---|---|---|
@@ -36,15 +36,15 @@
 | **RAW formats** | `.raw` `.cr2` `.cr3` `.nef` `.arw` `.dng` | `rawpy` (camera, ISO, exposure, dimensions) |
 | **Video formats** | `.mp4` `.mov` `.avi` `.mkv` `.webm` `.mts` `.m2ts` | `pymediainfo` (track metadata + GPS) |
 
-> ⚠️ Formats outside the `exifread`/core set require the matching **optional dependency** below. If it's missing, those files will be reported with `ERROR` status instead of being processed.
+>  Formats outside the `exifread`/core set require the matching **optional dependency** below. If it's missing, those files will be reported with `ERROR` status instead of being processed.
 
 ---
 
-## 📦 Installation
+##  Installation
 
 ### Option 1 — Download the full release 🚀
 
-👉 https://github.com/tc4dy/Catify/releases/tag/Catify
+https://github.com/tc4dy/Catify/releases/tag/Catify
 
 ### Option 2 — Clone the repo
 
@@ -213,7 +213,7 @@ Structured data for programmatic use, including GPS coordinates, hashes, and ful
 
 ---
 
-## 📁 Thumbnails
+##  Thumbnails
 
 If a file contains an embedded thumbnail (common in JPEGs) or supports thumbnail generation (via Pillow), Catify saves it as `{original_name}_thumb.jpg` inside the directory specified by `--thumbs` (default: `catify_thumbs`).
 
@@ -226,7 +226,7 @@ If a file contains an embedded thumbnail (common in JPEGs) or supports thumbnail
 
 ---
 
-## ⚠️ Requirements Summary
+##  Requirements Summary
 
 | Requirement | Notes |
 |---|---|
@@ -236,11 +236,5 @@ If a file contains an embedded thumbnail (common in JPEGs) or supports thumbnail
 | `Pillow` | Optional, for common image formats |
 | `rawpy` | Optional, for RAW formats |
 | `pymediainfo` + MediaInfo | Optional, for video formats |
-
----
-
-## 🐾 Author
-
-**@tc4dy** 
 
 The previous version (V1) has been further developed to offer improved formatting, broader format support, and more comprehensive metadata extraction.
