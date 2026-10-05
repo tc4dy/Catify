@@ -1,5 +1,7 @@
 # Catify – EXIF Metadata Tool
 
+![Catify](https://raw.githubusercontent.com/tc4dy/Catify/main/catify.jpg)
+
 **Catify** is a powerful command-line tool to extract, analyze, and report metadata from images, RAW files, and videos. It detects duplicate files via SHA256, extracts GPS coordinates with direct map links, saves embedded thumbnails, and generates beautiful terminal output or export reports in CSV, JSON, or HTML.
 
 [![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)](https://python.org)
